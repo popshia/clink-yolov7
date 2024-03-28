@@ -2,6 +2,8 @@ import argparse
 import os
 from subprocess import PIPE, Popen
 
+import wget
+
 
 class WrongModelError(Exception):
     def __init__(self, message):
@@ -24,7 +26,7 @@ class CalledProcessError(Exception):
 
 
 def CheckModel(args):
-    supported_model = ["car", "people"]
+    supported_model = ["v7", "tiny"]
     if args.model not in supported_model:
         raise WrongModelError(
             "'{}' isn't a valid model type, please select from: ['', ''].".format(
@@ -59,10 +61,22 @@ Proceed? (y/n) """.format(
 
 
 def ModelArgToWeight(model):
-    if model == "car":
-        return "./weights/yolov7.pt"
-    elif model == "boat":
-        return "./weights/yolov7.pt"
+    if model == "v7":
+        url = "https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7.pt"
+        if os.path.isfile("./weights/yolov7.pt"):
+            return "./weights/yolov7.pt"
+        else:
+            print("\nDownloading yolov7.pt from github...")
+            return wget.download(url, out="weights")
+    elif model == "tiny":
+        url = (
+            "https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7-tiny.pt"
+        )
+        if os.path.isfile("./weights/yolov7-tiny.pt"):
+            return "./weights/yolov7-tiny.pt"
+        else:
+            print("\nDownloading yolov7-tiny.pt from github...")
+            return wget.download(url, out="weights")
     else:
         return "./weights/yolov7.pt"
 
