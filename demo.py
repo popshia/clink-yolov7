@@ -1,8 +1,25 @@
-import argparse
+import logging
 import os
+import sys
+from datetime import datetime
 from subprocess import PIPE, Popen
 
 import wget
+
+SUPPORT_MODEL = ["v7", "tiny"]
+
+SCRIPT_TITLE = """
+         __ _         __                     __             _____
+  _____ / /(_)____   / /__    __  __ ____   / /____  _   __/__  /
+ / ___// // // __ \\ / //_/   / / / // __ \\ / // __ \\| | / /  / /
+/ /__ / // // / / // ,<     / /_/ // /_/ // // /_/ /| |/ /  / /
+\\___//_//_//_/ /_//_/|_|    \\__, / \\____//_/ \\____/ |___/  /_/
+       __                  /____/
+  ____/ /___   ____ ___   ____
+ / __  // _ \\ / __ `__ \\ / __ \\
+/ /_/ //  __// / / / / // /_/ /
+\\__,_/ \\___//_/ /_/ /_/ \\____/
+"""
 
 
 class WrongModelError(Exception):
@@ -25,14 +42,24 @@ class CalledProcessError(Exception):
         super().__init__(message)
 
 
-def CheckModel(args):
-    supported_model = ["v7", "tiny"]
-    if args.model not in supported_model:
-        raise WrongModelError(
-            "'{}' isn't a valid model type, please select from: ['', ''].".format(
-                args.model
-            ),
-        )
+def SetupLogger():
+    file_handler = logging.FileHandler(
+        "logs/{}.log".format(datetime.today().strftime("%Y-%m-%d_%H:%M"))
+    )
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",
+        datefmt="%Y-%m-%d_%H:%M",
+        handlers=[file_handler, console_handler],
+    )
+    logging.getLogger("requests").setLevel(logging.NOTSET)
+
+
+def CheckModel(chosen_model):
+    if chosen_model == 0 or chosen_model > len(SUPPORT_MODEL):
+        logging.warning("\nWRONG MODEL TYPE, PLEASE SELECT AGAIN!")
 
 
 def CheckVideo(args):
@@ -66,7 +93,7 @@ def ModelArgToWeight(model):
         if os.path.isfile("./weights/yolov7.pt"):
             return "./weights/yolov7.pt"
         else:
-            print("\nDownloading yolov7.pt from github...")
+            logging.info("\nDownloading yolov7.pt from github...")
             return wget.download(url, out="weights")
     elif model == "tiny":
         url = (
@@ -75,7 +102,7 @@ def ModelArgToWeight(model):
         if os.path.isfile("./weights/yolov7-tiny.pt"):
             return "./weights/yolov7-tiny.pt"
         else:
-            print("\nDownloading yolov7-tiny.pt from github...")
+            logging.info("\nDownloading yolov7-tiny.pt from github...")
             return wget.download(url, out="weights")
     else:
         return "./weights/yolov7.pt"
@@ -88,6 +115,7 @@ def RunInference(args):
             weight, args.video
         )
     )
+    logging.info("running command: {}".format(command))
     process = Popen(command, stdout=PIPE)
     while True:
         stdout = process.stdout.readline().rstrip().decode("utf-8")
@@ -96,34 +124,47 @@ def RunInference(args):
                 "Inference process error, please contact the maintainer!"
             )
         elif stdout:
-            print(stdout.strip())
+            logging.info(stdout.strip())
         else:
             break
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="This is a demo script using yolov7 as its backend."
-    )
-    parser.add_argument("--model", type=str, help='model type: ["", ""]')
-    parser.add_argument("--video", type=str, help="demo video to be inferenced")
-    args = parser.parse_args()
+    SetupLogger()
+    logging.info(SCRIPT_TITLE)
 
-    while 1:
-        try:
-            DoubleCheck(args)
-            CheckModel(args)
-            CheckVideo(args)
-            RunInference(args)
-        except Exception as e:
-            print("\n", end="")
-            print(e)
-            if type(e).__name__ not in [
-                WrongModelError,
-                VidNotExistError,
-                DoubleCheckDeclineError,
-                CalledProcessError,
-            ]:
-                print("\nInference process error, please contact the maintainer!")
-        finally:
-            break
+    while True:
+        logging.info("\n-------------- Support Models --------------")
+        for i, model in enumerate(SUPPORT_MODEL):
+            logging.info("{}: {} \t\t".format(i + 1, model))
+
+        while True:
+            model = int(input("\nPlease choose the model you wish to use: "))
+            if CheckModel(model) == False:
+                break
+
+            video = input("\nPlease enter the path of the file you wish to inference: ")
+
+            while True:
+                if CheckVideo(video) == False:
+
+
+    # try:
+    #     DoubleCheck(args)
+    #     CheckModel(args)
+    #     CheckVideo(args)
+    #     RunInference(args)
+    # except Exception as e:
+    #     logging.info("\n")
+    #     logging.info(e)
+    #     if type(e).__name__ not in [
+    #         WrongModelError,
+    #         VidNotExistError,
+    #         DoubleCheckDeclineError,
+    #         CalledProcessError,
+    #     ]:
+    #         logging.info(
+    #             "\nInference process error, please contact the maintainer!"
+    #         )
+    # finally:
+    #     break
