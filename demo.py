@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import time
 from datetime import datetime
 from subprocess import PIPE, Popen
 
@@ -57,34 +58,59 @@ def SetupLogger():
     logging.getLogger("requests").setLevel(logging.NOTSET)
 
 
-def CheckModel(chosen_model):
-    if chosen_model == 0 or chosen_model > len(SUPPORT_MODEL):
-        logging.warning("\nWRONG MODEL TYPE, PLEASE SELECT AGAIN!")
+def PrintSupportModel():
+    logging.info("\n--------------- Support Models ----------------")
+    for i, model in enumerate(SUPPORT_MODEL):
+        logging.info("{}: {} \t\t".format(i + 1, model))
+    logging.info("-----------------------------------------------")
 
 
-def CheckVideo(args):
-    if not os.path.isfile(args.video):
-        raise VidNotExistError(
-            "'{}' doesn't exist, please check the file path.".format(args.video)
-        )
+def PrintVideos():
+    logging.info("\n-------------- Available Videos ---------------")
+    for i, video in enumerate(sorted(os.listdir("./videos/"))):
+        logging.info("{}: {} \t\t".format(i + 1, video))
+    logging.info("-----------------------------------------------")
+    logging.info(
+        """
+* if you can't find your video down below,
+  please transfer the video again! """
+    )
 
 
-def DoubleCheck(args):
+def CheckModel(model_index):
+    if model_index == 0 or model_index > len(SUPPORT_MODEL):
+        logging.warning("WRONG MODEL TYPE, PLEASE SELECT AGAIN!")
+        time.sleep(0.5)
+        return False
+
+    return SUPPORT_MODEL[model_index - 1]
+
+
+def CheckVideo(video_index):
+    if video_index == 0 or video_index > len(os.listdir("./videos/")):
+        logging.warning("WRONG VIDEO INDEX, PLEASE SELECT AGAIN!")
+        time.sleep(0.5)
+        return False
+
+    return sorted(os.listdir("./videos/"))[video_index - 1]
+
+
+def DoubleCheck(model, video):
     proceed = input(
         """
-Please review your arguments:
+Please review your selections:
 
 1. Chosen model: {}
-2. Given demo video: {}
+2. Chosen video: {}
 
 Proceed? (y/n) """.format(
-            args.model, args.video
+            model, video
         )
     )
     if proceed != "y":
-        raise DoubleCheckDeclineError(
-            "Please run the demo script with the your preferred arguments again."
-        )
+        logging.warning("PLEASE RERUN THE SCRIPT AND SELECT YOUR PREFER OPTIONS!")
+        time.sleep(0.5)
+        exit(0)
 
 
 def ModelArgToWeight(model):
@@ -108,14 +134,13 @@ def ModelArgToWeight(model):
         return "./weights/yolov7.pt"
 
 
-def RunInference(args):
-    weight = ModelArgToWeight(args.model)
+def RunInference(model, weight):
+    weight = ModelArgToWeight(model)
     command = (
         "python detect.py --weights {} --conf 0.25 --imgsize 640 --source {}".format(
-            weight, args.video
+            weight, video
         )
     )
-    logging.info("running command: {}".format(command))
     process = Popen(command, stdout=PIPE)
     while True:
         stdout = process.stdout.readline().rstrip().decode("utf-8")
@@ -134,37 +159,34 @@ if __name__ == "__main__":
     logging.info(SCRIPT_TITLE)
 
     while True:
-        logging.info("\n-------------- Support Models --------------")
-        for i, model in enumerate(SUPPORT_MODEL):
-            logging.info("{}: {} \t\t".format(i + 1, model))
+        PrintSupportModel()
 
         while True:
-            model = int(input("\nPlease choose the model you wish to use: "))
-            if CheckModel(model) == False:
+            model = int(input("\nPlease select model: "))
+            model = CheckModel(model)
+            if model == False:
                 break
 
-            video = input("\nPlease enter the path of the file you wish to inference: ")
+            logging.info("Model selected: {}\n".format(model))
 
             while True:
-                if CheckVideo(video) == False:
+                PrintVideos()
 
+                while True:
+                    video = int(input("\nPlease select video: "))
+                    video = CheckVideo(video)
+                    if video == False:
+                        break
 
-    # try:
-    #     DoubleCheck(args)
-    #     CheckModel(args)
-    #     CheckVideo(args)
-    #     RunInference(args)
-    # except Exception as e:
-    #     logging.info("\n")
-    #     logging.info(e)
-    #     if type(e).__name__ not in [
-    #         WrongModelError,
-    #         VidNotExistError,
-    #         DoubleCheckDeclineError,
-    #         CalledProcessError,
-    #     ]:
-    #         logging.info(
-    #             "\nInference process error, please contact the maintainer!"
-    #         )
-    # finally:
-    #     break
+                    logging.info("Video selected: {}\n".format(video))
+                    DoubleCheck(model, video)
+                    logging.info("\nRunning Inference...\n")
+
+                    try:
+                        RunInference(model, video)
+                    except Exception as e:
+                        print(e)
+                        logging.warning(
+                            "\nInference process error, please contact the maintainer!"
+                        )
+                        exit(0)
