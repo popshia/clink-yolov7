@@ -19,3 +19,4 @@ docker exec -it -u v7 v7 /usr/bin/fish
 ```bash
 python demo.py
 ```
+> /mnt/clink/C-LINK AI@CORE/共用區/old/Other/Video/
