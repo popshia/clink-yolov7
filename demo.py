@@ -1,13 +1,8 @@
-import logging
 import os
 import sys
 import time
 from datetime import datetime
-from subprocess import PIPE, Popen
-
-import wget
-
-SUPPORT_MODEL = ["v7", "tiny", "vehicle", "hualian-port"]
+from subprocess import Popen
 
 SCRIPT_TITLE = """
          __ _         __                     __             _____
@@ -28,34 +23,19 @@ class CalledProcessError(Exception):
         super().__init__(message)
 
 
-def SetupLogger():
-    file_handler = logging.FileHandler(
-        "logs/{}.log".format(datetime.today().strftime("%Y%m%d_%H%M"))
-    )
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(message)s",
-        datefmt="%Y%m%d_%H%M",
-        handlers=[file_handler, console_handler],
-    )
-    logging.getLogger("requests").setLevel(logging.NOTSET)
-
-
 def PrintSupportModel():
-    logging.info("\n-------------------- Support Models ---------------------")
-    for i, model in enumerate(SUPPORT_MODEL):
-        logging.info("{}: {} \t\t".format(i + 1, model))
-    logging.info("---------------------------------------------------------")
+    print("\n-------------------- Support Models ---------------------")
+    for i, model in enumerate(sorted(os.listdir("./weights/"))):
+        print("{}: {} \t\t".format(i + 1, model))
+    print("---------------------------------------------------------")
 
 
 def PrintVideos():
-    logging.info("\n------------------- Available Videos --------------------")
+    print("\n------------------- Available Videos --------------------")
     for i, video in enumerate(sorted(os.listdir("./videos/"))):
-        logging.info("{}: {} \t\t".format(i + 1, video))
-    logging.info("---------------------------------------------------------")
-    logging.info(
+        print("{}: {} \t\t".format(i + 1, video))
+    print("---------------------------------------------------------")
+    print(
         """
 * if you can't find your video down below,
   please press 'q' to exit and transfer the video again! """
@@ -63,22 +43,24 @@ def PrintVideos():
 
 
 def CheckModel(model_index):
-    if model_index == 0 or model_index > len(SUPPORT_MODEL):
-        logging.warning("WRONG MODEL TYPE, PLEASE SELECT AGAIN!")
+    if model_index == 0 or model_index > len(os.listdir("./weights/")):
+        print("WRONG MODEL TYPE, PLEASE SELECT AGAIN!")
         time.sleep(0.5)
         return False
 
-    return SUPPORT_MODEL[model_index - 1]
+    print("Model selected: {}\n".format(model))
+    return sorted(os.listdir("./weights/"))[model_index - 1]
 
 
 def CheckVideo(video_index):
     if video_index == "q":
         exit(0)
     if video_index == "0" or int(video_index) > len(os.listdir("./videos/")):
-        logging.warning("WRONG VIDEO INDEX, PLEASE SELECT AGAIN!")
+        print("WRONG VIDEO INDEX, PLEASE SELECT AGAIN!")
         time.sleep(0.5)
         return False
 
+    print("Video selected: {}\n".format(video))
     return sorted(os.listdir("./videos/"))[int(video_index) - 1]
 
 
@@ -95,55 +77,35 @@ Proceed? (y/n) """.format(
         )
     )
     if proceed != "y":
-        logging.warning("PLEASE STARTOVER AGAIN!")
+        print("PLEASE STARTOVER AGAIN!")
         time.sleep(0.5)
         os.execl(sys.executable, sys.executable, *sys.argv)
 
 
-def ModelArgToWeight(model):
-    if model == "v7":
-        url = "https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7.pt"
-        if os.path.isfile("./weights/yolov7.pt"):
-            return "./weights/yolov7.pt"
-        else:
-            logging.info("\nDownloading yolov7.pt from github...")
-            return wget.download(url, out="weights")
-    elif model == "tiny":
-        url = (
-            "https://github.com/WongKinYiu/yolov7/releases/download/v0.1/yolov7-tiny.pt"
-        )
-        if os.path.isfile("./weights/yolov7-tiny.pt"):
-            return "./weights/yolov7-tiny.pt"
-        else:
-            logging.info("\nDownloading yolov7-tiny.pt from github...")
-            return wget.download(url, out="weights")
-    elif model == "vehicle":
-        return "./weights/vehicle.pt"
-    elif model == "hualian-port":
-        return "./weights/hualian_port_0329.pt"
-
-
 def RunInference(model, video):
-    weight = ModelArgToWeight(model)
-    command = (
-        "python detect.py --weights {} --conf 0.25 --imgsize 640 --source {}".format(
-            weight, video
-        )
-    )
-    process = Popen(command, stdout=PIPE)
-    while True:
-        stdout = process.stdout.readline().rstrip().decode("utf-8")
-        if process.poll() == 0:
-            break
-        elif stdout:
-            logging.info(stdout.strip())
-        else:
-            break
+    model = os.path.join("./weights/", model)
+    video = os.path.join("./videos/", video)
+    command = [
+        "python",
+        "detect.py",
+        "--conf",
+        "0.25",
+        "--img-size",
+        "640",
+        "--weights",
+        model,
+        "--source",
+        video,
+        "--name",
+        datetime.today().strftime("%Y%m%d_%H%M"),
+    ]
+    print("\nRunning Inference...\n")
+    process = Popen(command).wait()
+    exit(0)
 
 
 if __name__ == "__main__":
-    SetupLogger()
-    logging.info(SCRIPT_TITLE)
+    print(SCRIPT_TITLE)
 
     while True:
         PrintSupportModel()
@@ -154,8 +116,6 @@ if __name__ == "__main__":
             if model == False:
                 break
 
-            logging.info("Model selected: {}\n".format(model))
-
             while True:
                 PrintVideos()
 
@@ -165,15 +125,13 @@ if __name__ == "__main__":
                     if video == False:
                         break
 
-                    logging.info("Video selected: {}\n".format(video))
                     DoubleCheck(model, video)
-                    logging.info("\nRunning Inference...\n")
 
                     try:
                         RunInference(model, video)
                     except Exception as e:
                         print(e)
-                        logging.warning(
-                            "\nInference process error, please contact the maintainer!"
+                        print(
+                            "\nInference process error, please contact the script maintainer!"
                         )
                         exit(0)
