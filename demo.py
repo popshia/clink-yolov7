@@ -83,8 +83,9 @@ Proceed? (y/n) """.format(
 
 
 def RunInference(model, video):
-    model = os.path.join("./weights/", model)
-    video = os.path.join("./videos/", video)
+    arg_model = os.path.join("./weights/", model)
+    arg_video = os.path.join("./videos/", video)
+    arg_name = model.split(".")[0] + "_" + video.split(".")[0]
     command = [
         "python",
         "detect.py",
@@ -93,14 +94,15 @@ def RunInference(model, video):
         "--img-size",
         "640",
         "--weights",
-        model,
+        arg_model,
         "--source",
-        video,
+        arg_video,
         "--name",
-        datetime.today().strftime("%Y%m%d_%H%M"),
+        arg_name,
     ]
     print("\nRunning Inference...\n")
-    process = Popen(command).wait()
+    Popen(command).wait()
+    print("\nResult(s) saved to ./runs/detect/{}.".format(arg_name))
     exit(0)
 
 
