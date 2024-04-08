@@ -7,7 +7,7 @@ from subprocess import PIPE, Popen
 
 import wget
 
-SUPPORT_MODEL = ["v7", "tiny"]
+SUPPORT_MODEL = ["v7", "tiny", "vehicle", "hualian-port"]
 
 SCRIPT_TITLE = """
          __ _         __                     __             _____
@@ -23,21 +23,6 @@ SCRIPT_TITLE = """
 """
 
 
-class WrongModelError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
-
-class VidNotExistError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
-
-class DoubleCheckDeclineError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
-
 class CalledProcessError(Exception):
     def __init__(self, message):
         super().__init__(message)
@@ -45,35 +30,35 @@ class CalledProcessError(Exception):
 
 def SetupLogger():
     file_handler = logging.FileHandler(
-        "logs/{}.log".format(datetime.today().strftime("%Y-%m-%d_%H:%M"))
+        "logs/{}.log".format(datetime.today().strftime("%Y%m%d_%H%M"))
     )
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
     logging.basicConfig(
         level=logging.INFO,
         format="%(message)s",
-        datefmt="%Y-%m-%d_%H:%M",
+        datefmt="%Y%m%d_%H%M",
         handlers=[file_handler, console_handler],
     )
     logging.getLogger("requests").setLevel(logging.NOTSET)
 
 
 def PrintSupportModel():
-    logging.info("\n--------------- Support Models ----------------")
+    logging.info("\n-------------------- Support Models ---------------------")
     for i, model in enumerate(SUPPORT_MODEL):
         logging.info("{}: {} \t\t".format(i + 1, model))
-    logging.info("-----------------------------------------------")
+    logging.info("---------------------------------------------------------")
 
 
 def PrintVideos():
-    logging.info("\n-------------- Available Videos ---------------")
+    logging.info("\n------------------- Available Videos --------------------")
     for i, video in enumerate(sorted(os.listdir("./videos/"))):
         logging.info("{}: {} \t\t".format(i + 1, video))
-    logging.info("-----------------------------------------------")
+    logging.info("---------------------------------------------------------")
     logging.info(
         """
 * if you can't find your video down below,
-  please transfer the video again! """
+  please press 'q' to exit and transfer the video again! """
     )
 
 
@@ -87,12 +72,14 @@ def CheckModel(model_index):
 
 
 def CheckVideo(video_index):
-    if video_index == 0 or video_index > len(os.listdir("./videos/")):
+    if video_index == "q":
+        exit(0)
+    if video_index == "0" or int(video_index) > len(os.listdir("./videos/")):
         logging.warning("WRONG VIDEO INDEX, PLEASE SELECT AGAIN!")
         time.sleep(0.5)
         return False
 
-    return sorted(os.listdir("./videos/"))[video_index - 1]
+    return sorted(os.listdir("./videos/"))[int(video_index) - 1]
 
 
 def DoubleCheck(model, video):
@@ -108,9 +95,9 @@ Proceed? (y/n) """.format(
         )
     )
     if proceed != "y":
-        logging.warning("PLEASE RERUN THE SCRIPT AND SELECT YOUR PREFER OPTIONS!")
+        logging.warning("PLEASE STARTOVER AGAIN!")
         time.sleep(0.5)
-        exit(0)
+        os.execl(sys.executable, sys.executable, *sys.argv)
 
 
 def ModelArgToWeight(model):
@@ -130,11 +117,13 @@ def ModelArgToWeight(model):
         else:
             logging.info("\nDownloading yolov7-tiny.pt from github...")
             return wget.download(url, out="weights")
-    else:
-        return "./weights/yolov7.pt"
+    elif model == "vehicle":
+        return "./weights/vehicle.pt"
+    elif model == "hualian-port":
+        return "./weights/hualian_port_0329.pt"
 
 
-def RunInference(model, weight):
+def RunInference(model, video):
     weight = ModelArgToWeight(model)
     command = (
         "python detect.py --weights {} --conf 0.25 --imgsize 640 --source {}".format(
@@ -144,10 +133,8 @@ def RunInference(model, weight):
     process = Popen(command, stdout=PIPE)
     while True:
         stdout = process.stdout.readline().rstrip().decode("utf-8")
-        if process.poll() != 0:
-            raise CalledProcessError(
-                "Inference process error, please contact the maintainer!"
-            )
+        if process.poll() == 0:
+            break
         elif stdout:
             logging.info(stdout.strip())
         else:
@@ -173,7 +160,7 @@ if __name__ == "__main__":
                 PrintVideos()
 
                 while True:
-                    video = int(input("\nPlease select video: "))
+                    video = input("\nPlease select video or 'q' to exit: ")
                     video = CheckVideo(video)
                     if video == False:
                         break
