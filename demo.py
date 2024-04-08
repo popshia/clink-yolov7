@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-from datetime import datetime
 from subprocess import Popen
 
 SCRIPT_TITLE = """
@@ -102,7 +101,7 @@ def RunInference(model, video):
     ]
     print("\nRunning Inference...\n")
     Popen(command).wait()
-    print("\nResult(s) saved to ./runs/detect/{}.".format(arg_name))
+    print("\nResult(s) saved to ./runs/detect/{}".format(arg_name))
     exit(0)
 
 
