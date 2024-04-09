@@ -4,9 +4,11 @@ import glob
 import logging
 import math
 import os
+import pickle
 import random
 import shutil
 import time
+from copy import deepcopy
 from itertools import repeat
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
@@ -16,18 +18,25 @@ import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image, ExifTags
+from PIL import ExifTags, Image
 from torch.utils.data import Dataset
-from tqdm import tqdm
+from torchvision.ops import ps_roi_align, ps_roi_pool, roi_align, roi_pool
 
-import pickle
-from copy import deepcopy
 #from pycocotools import mask as maskUtils
 from torchvision.utils import save_image
-from torchvision.ops import roi_pool, roi_align, ps_roi_pool, ps_roi_align
+from tqdm import tqdm
 
-from utils.general import check_requirements, xyxy2xywh, xywh2xyxy, xywhn2xyxy, xyn2xy, segment2box, segments2boxes, \
-    resample_segments, clean_str
+from utils.general import (
+    check_requirements,
+    clean_str,
+    resample_segments,
+    segment2box,
+    segments2boxes,
+    xyn2xy,
+    xywh2xyxy,
+    xywhn2xyxy,
+    xyxy2xywh,
+)
 from utils.torch_utils import torch_distributed_zero_first
 
 # Parameters
@@ -178,7 +187,7 @@ class LoadImages:  # for inference
                     ret_val, img0 = self.cap.read()
 
             self.frame += 1
-            print(f'video {self.count + 1}/{self.nf} ({self.frame}/{self.nframes}) {path}: ', end='')
+            # print(f'video {self.count + 1}/{self.nf} ({self.frame}/{self.nframes}) {path}: ', end='')
 
         else:
             # Read image

@@ -93,6 +93,7 @@ def RunInference(model, video):
         "--img-size",
         "640",
         "--save-txt",
+        "--exist-ok",
         "--weights",
         arg_model,
         "--source",
@@ -102,7 +103,11 @@ def RunInference(model, video):
     ]
     print("\nRunning Inference...\n")
     Popen(command).wait()
-    print("\nResult(s) saved to ./runs/detect/{}".format(arg_name))
+    print(
+        "\nResult(s) saved to /media/ai/data/v7/yolov7/runs/detect/{} on host machine.".format(
+            arg_name
+        )
+    )
     exit(0)
 
 

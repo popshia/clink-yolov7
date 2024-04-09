@@ -1,5 +1,6 @@
 import argparse
 import time
+import warnings
 from pathlib import Path
 
 import cv2
@@ -29,6 +30,8 @@ from utils.torch_utils import (
     select_device,
     time_synchronized,
 )
+
+warnings.filterwarnings("ignore")
 
 
 def detect(save_img=False):
@@ -235,7 +238,7 @@ def detect(save_img=False):
         )
         # print(f"Results saved to {save_dir}{s}")
 
-    print(f"Done. ({time.time() - t0:.3f}s)")
+    print(f"\nDone. ({time.time() - t0:.3f}s)")
 
 
 if __name__ == "__main__":
