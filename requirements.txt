@@ -39,4 +39,4 @@ thop  # FLOPs computation
 # roboflow
 
 # Demo ----------------------------------------
-wget
+alive-progress
