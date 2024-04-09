@@ -92,6 +92,7 @@ def RunInference(model, video):
         "0.25",
         "--img-size",
         "640",
+        "--save-txt",
         "--weights",
         arg_model,
         "--source",
